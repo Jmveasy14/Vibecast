@@ -51,7 +51,7 @@ app.get('/api/auth/login', (req, res) => {
         state, 
         show_dialog: true
     });
-    // FIXED URL:
+    // FIXED URL: Pointing to real Spotify Accounts Service
     res.redirect(`https://accounts.spotify.com/authorize?${params.toString()}`);
 });
 
@@ -73,7 +73,7 @@ app.get('/api/auth/callback', async (req, res) => {
             redirect_uri: SPOTIFY_REDIRECT_URI 
         });
         
-        // FIXED URL:
+        // FIXED URL: Real Spotify Token Endpoint
         const response = await axios({
             method: 'post', 
             url: 'https://accounts.spotify.com/api/token', 
@@ -98,7 +98,7 @@ app.get('/api/playlists', async (req, res) => {
     if (!token) return res.status(401).json({ error: 'Authorization token not provided.' });
     
     try {
-        // FIXED URL:
+        // FIXED URL: Real Spotify API
         const response = await axios.get('https://api.spotify.com/v1/me/playlists', { 
             headers: { 'Authorization': token } 
         });
@@ -121,7 +121,7 @@ app.get('/api/playlist/:id', async (req, res) => {
         let allTracks = [];
         const fields = 'items(track(id,name,artists(name))),next';
         
-        // FIXED URL:
+        // FIXED URL: Real Spotify API
         let nextUrl = `https://api.spotify.com/v1/playlists/${playlistId}/tracks?fields=${encodeURIComponent(fields)}`;
         
         while (nextUrl) {
@@ -166,7 +166,7 @@ app.get('/api/playlist/:id', async (req, res) => {
             const { name, artist } = analysisResult.recommendedSong;
             const searchQuery = `track:${name} artist:${artist}`;
             
-            // FIXED URL:
+            // FIXED URL: Real Spotify Search API
             const searchUrl = `https://api.spotify.com/v1/search?q=${encodeURIComponent(searchQuery)}&type=track&limit=1`;
             
             try {
