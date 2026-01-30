@@ -1,5 +1,5 @@
 // client/src/App.js
-// Main component for the VibeCast React frontend
+// DEBUGGING VERSION - Prevents app reset on error
 
 import React, { useState, useEffect } from 'react';
 import './App.css';
@@ -17,9 +17,8 @@ function App() {
   const [selectedPlaylistName, setSelectedPlaylistName] = useState('');
 
   // State for UI control
-  const [appState, setAppState] = useState('login'); // 'login', 'playlists', 'analyzing', 'results'
+  const [appState, setAppState] = useState('login'); 
   const [loadingMessage, setLoadingMessage] = useState('');
-
 
   // --- Effects ---
 
@@ -44,7 +43,7 @@ function App() {
     }
   }, []);
 
-  // When appState changes to 'playlists', fetch the user's playlists
+  // Fetch playlists
   useEffect(() => {
     if (appState !== 'playlists' || !accessToken) return;
 
@@ -81,8 +80,15 @@ function App() {
         setAnalysisData(response.data);
         setAppState('results'); 
     } catch (error) {
+        // --- DEBUGGING CHANGE START ---
         console.error("Error analyzing playlist:", error);
-        setAppState('playlists'); // Go back to playlists on error
+        
+        // We COMMENTED OUT the reset line so the app stays on the loading screen
+        // setAppState('playlists'); 
+
+        // We ADDED this alert to notify you
+        alert("ERROR! The app has stopped so you can check the Console logs.");
+        // --- DEBUGGING CHANGE END ---
     }
     setLoadingMessage('');
   };
@@ -91,7 +97,6 @@ function App() {
       setAnalysisData(null);
       setAppState('playlists');
   }
-
 
   // --- Render Logic ---
 
@@ -105,7 +110,7 @@ function App() {
               <div className="playlists-grid">
                 {playlists.map((playlist) => (
                   <div key={playlist.id} className="playlist-item" onClick={() => handlePlaylistClick(playlist)}>
-                    {playlist.images?.[0] ? (   // <--- Added ?. here
+                    {playlist.images?.[0] ? (
                       <img src={playlist.images[0].url} alt={`${playlist.name} cover`} />
                     ) : (
                       <div className="playlist-placeholder-image">♫</div>
@@ -124,13 +129,13 @@ function App() {
           <div className="analyzing-container">
             <div className="spinner"></div>
             <p className="loading-text">{loadingMessage}</p>
+            {/* Added a cancel button in case it freezes */}
+            <button className="spotify-button" style={{marginTop: '20px', background: '#444'}} onClick={() => setAppState('playlists')}>Cancel / Go Back</button>
           </div>
         );
       
       case 'results':
-          if (!analysisData) {
-              return <p>No analysis data available.</p>;
-          }
+          if (!analysisData) return <p>No analysis data available.</p>;
           return (
               <div className="results-container">
                   <h2>The VibeCast for "{selectedPlaylistName}" is...</h2>
@@ -173,7 +178,6 @@ function App() {
           <div className="login-container">
             <h1 className="login-title">VibeCast</h1>
             <p className="login-tagline">Smart Music Recommender by Joshua Veasy.</p>
-            {/* This link now points to the correct backend URL */}
             <a className="spotify-button" href={`${API_BASE_URL}/api/auth/login`}>
               ♫ Connect with Spotify
             </a>
