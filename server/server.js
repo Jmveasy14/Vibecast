@@ -22,13 +22,35 @@ const FRONTEND_URI = process.env.FRONTEND_URI || 'http://127.0.0.1:3000';
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 
 // --- Middleware ---
+const allowedOrigins = [
+  'https://vibecast-ashy.vercel.app',
+  'http://127.0.0.1:3000',
+  'http://localhost:3000'
+];
+
 app.use(cors({
-  origin: 'https://vibecast-ashy.vercel.app', // Your actual frontend URL
-  credentials: true 
+  origin: (origin, cb) => {
+    if (!origin || allowedOrigins.includes(origin)) return cb(null, true);
+    cb(new Error('Not allowed by CORS'));
+  },
+  credentials: true,
+  allowedHeaders: ['Authorization', 'authorization', 'Content-Type']
 }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
+
+// Manual preflight handler
+app.use((req, res, next) => {
+  if (req.method === 'OPTIONS') {
+    res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
+    res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+    res.header('Access-Control-Allow-Headers', 'Authorization, Content-Type');
+    res.header('Access-Control-Allow-Credentials', 'true');
+    return res.sendStatus(200);
+  }
+  next();
+});
 
 // --- Helper Functions ---
 const generateRandomString = (length) => {
@@ -96,6 +118,7 @@ app.get('/api/auth/callback', async (req, res) => {
 
 // 3. GET PLAYLISTS
 app.get('/api/playlists', async (req, res) => {
+    console.log('GET /api/playlists called', req.headers.authorization ? 'with token' : 'without token');
     const token = req.headers.authorization;
     if (!token) return res.status(401).json({ error: 'Authorization token not provided.' });
     
@@ -112,7 +135,9 @@ app.get('/api/playlists', async (req, res) => {
 });
 
 // 4. ANALYZE PLAYLIST
+app.options('/api/playlist/:id', cors());
 app.get('/api/playlist/:id', async (req, res) => {
+    console.log('Analyze request for playlist', req.params.id, req.headers.authorization ? 'with token' : 'without token');
     const token = req.headers.authorization;
     const playlistId = req.params.id;
     
@@ -157,7 +182,7 @@ app.get('/api/playlist/:id', async (req, res) => {
         `;
 
         // CORRECTED: Official Gemini API URL (Stable version)
-        const geminiApiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`;
+        const geminiApiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${GEMINI_API_KEY}`;
         const geminiResponse = await axios.post(geminiApiUrl, {
             contents: [{ parts: [{ text: prompt }] }],
             generationConfig: { response_mime_type: "application/json" }

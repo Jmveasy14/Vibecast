@@ -80,15 +80,8 @@ function App() {
         setAnalysisData(response.data);
         setAppState('results'); 
     } catch (error) {
-        // --- DEBUGGING CHANGE START ---
         console.error("Error analyzing playlist:", error);
-        
-        // We COMMENTED OUT the reset line so the app stays on the loading screen
-        // setAppState('playlists'); 
-
-        // We ADDED this alert to notify you
-        alert("ERROR! The app has stopped so you can check the Console logs.");
-        // --- DEBUGGING CHANGE END ---
+        setAppState('playlists');
     }
     setLoadingMessage('');
   };
