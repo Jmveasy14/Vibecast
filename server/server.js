@@ -53,7 +53,7 @@ app.get('/api/auth/login', (req, res) => {
         show_dialog: true
     });
     
-    // CORRECT URL: Spotify Accounts Service
+    // CORRECT URL: https://accounts.spotify.com/authorize
     res.redirect(`https://accounts.spotify.com/authorize?${params.toString()}`);
 });
 
@@ -75,7 +75,7 @@ app.get('/api/auth/callback', async (req, res) => {
             redirect_uri: SPOTIFY_REDIRECT_URI 
         });
         
-        // CORRECT URL: Spotify Token Endpoint
+        // CORRECT URL: https://accounts.spotify.com/api/token
         const response = await axios({
             method: 'post', 
             url: 'https://accounts.spotify.com/api/token', 
@@ -100,7 +100,7 @@ app.get('/api/playlists', async (req, res) => {
     if (!token) return res.status(401).json({ error: 'Authorization token not provided.' });
     
     try {
-        // CORRECT URL: Spotify Web API
+        // CORRECT URL: https://api.spotify.com/v1/me/playlists
         const response = await axios.get('https://api.spotify.com/v1/me/playlists', { 
             headers: { 'Authorization': token } 
         });
@@ -124,7 +124,7 @@ app.get('/api/playlist/:id', async (req, res) => {
         let allTracks = [];
         const fields = 'items(track(id,name,artists(name))),next';
         
-        // CORRECT URL: Spotify Playlist Tracks Endpoint
+        // CORRECT URL: https://api.spotify.com/v1/playlists/...
         let nextUrl = `https://api.spotify.com/v1/playlists/${playlistId}/tracks?fields=${encodeURIComponent(fields)}`;
         
         while (nextUrl) {
@@ -169,7 +169,7 @@ app.get('/api/playlist/:id', async (req, res) => {
             const { name, artist } = analysisResult.recommendedSong;
             const searchQuery = `track:${name} artist:${artist}`;
             
-            // CORRECT URL: Spotify Search Endpoint
+            // CORRECT URL: https://api.spotify.com/v1/search
             const searchUrl = `https://api.spotify.com/v1/search?q=${encodeURIComponent(searchQuery)}&type=track&limit=1`;
             
             try {
