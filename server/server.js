@@ -43,6 +43,7 @@ app.get('/api/auth/login', (req, res) => {
     const state = generateRandomString(16);
     res.cookie(stateKey, state);
     const scope = 'user-read-private user-read-email playlist-read-private playlist-read-collaborative';
+    
     const params = new URLSearchParams({
         response_type: 'code', 
         client_id: SPOTIFY_CLIENT_ID, 
@@ -51,7 +52,8 @@ app.get('/api/auth/login', (req, res) => {
         state, 
         show_dialog: true
     });
-    // FIXED: Points to Real Spotify Auth
+    
+    // REAL URL: Points to Spotify Accounts
     res.redirect(`https://accounts.spotify.com/authorize?${params.toString()}`);
 });
 
@@ -73,7 +75,7 @@ app.get('/api/auth/callback', async (req, res) => {
             redirect_uri: SPOTIFY_REDIRECT_URI 
         });
         
-        // FIXED: Points to Real Spotify Token API
+        // REAL URL: Points to Spotify Token API
         const response = await axios({
             method: 'post', 
             url: 'https://accounts.spotify.com/api/token', 
@@ -98,7 +100,7 @@ app.get('/api/playlists', async (req, res) => {
     if (!token) return res.status(401).json({ error: 'Authorization token not provided.' });
     
     try {
-        // FIXED: Points to Real Spotify Me/Playlists
+        // REAL URL: Points to Spotify Web API
         const response = await axios.get('https://api.spotify.com/v1/me/playlists', { 
             headers: { 'Authorization': token } 
         });
@@ -122,7 +124,7 @@ app.get('/api/playlist/:id', async (req, res) => {
         let allTracks = [];
         const fields = 'items(track(id,name,artists(name))),next';
         
-        // FIXED: Points to Real Spotify Playlist Tracks
+        // REAL URL: Points to Spotify Playlist Tracks
         let nextUrl = `https://api.spotify.com/v1/playlists/${playlistId}/tracks?fields=${encodeURIComponent(fields)}`;
         
         while (nextUrl) {
@@ -131,7 +133,7 @@ app.get('/api/playlist/:id', async (req, res) => {
             nextUrl = tracksResponse.data.next;
         }
 
-        // Step 2: Gemini Analysis
+        // Step 2: Gemini Analysis (Unchanged)
         const trackList = allTracks.slice(0, 50).map(t => `${t.name} by ${t.artists.map(a => a.name).join(', ')}`).join('\n'); 
         
         const prompt = `
@@ -167,7 +169,7 @@ app.get('/api/playlist/:id', async (req, res) => {
             const { name, artist } = analysisResult.recommendedSong;
             const searchQuery = `track:${name} artist:${artist}`;
             
-            // FIXED: Points to Real Spotify Search
+            // REAL URL: Points to Spotify Search
             const searchUrl = `https://api.spotify.com/v1/search?q=${encodeURIComponent(searchQuery)}&type=track&limit=1`;
             
             try {
