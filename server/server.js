@@ -51,7 +51,7 @@ app.get('/api/auth/login', (req, res) => {
         state, 
         show_dialog: true
     });
-    // FIXED URL: Pointing to real Spotify Accounts Service
+    // CORRECTION: Use the real Spotify Auth URL
     res.redirect(`https://accounts.spotify.com/authorize?${params.toString()}`);
 });
 
@@ -73,7 +73,7 @@ app.get('/api/auth/callback', async (req, res) => {
             redirect_uri: SPOTIFY_REDIRECT_URI 
         });
         
-        // FIXED URL: Real Spotify Token Endpoint
+        // CORRECTION: Use the real Spotify Token URL
         const response = await axios({
             method: 'post', 
             url: 'https://accounts.spotify.com/api/token', 
@@ -98,12 +98,13 @@ app.get('/api/playlists', async (req, res) => {
     if (!token) return res.status(401).json({ error: 'Authorization token not provided.' });
     
     try {
-        // FIXED URL: Real Spotify API
+        // CORRECTION: Use the real Spotify API URL
         const response = await axios.get('https://api.spotify.com/v1/me/playlists', { 
             headers: { 'Authorization': token } 
         });
         res.status(200).json(response.data);
     } catch (error) {
+        console.error("Error fetching playlists:", error.message);
         res.status(error.response?.status || 500).json({ error: 'Failed to fetch playlists.' });
     }
 });
@@ -121,7 +122,7 @@ app.get('/api/playlist/:id', async (req, res) => {
         let allTracks = [];
         const fields = 'items(track(id,name,artists(name))),next';
         
-        // FIXED URL: Real Spotify API
+        // CORRECTION: Use the real Spotify API URL
         let nextUrl = `https://api.spotify.com/v1/playlists/${playlistId}/tracks?fields=${encodeURIComponent(fields)}`;
         
         while (nextUrl) {
@@ -130,7 +131,7 @@ app.get('/api/playlist/:id', async (req, res) => {
             nextUrl = tracksResponse.data.next;
         }
 
-        // Step 2: Gemini Analysis (Unchanged)
+        // Step 2: Gemini Analysis
         const trackList = allTracks.slice(0, 50).map(t => `${t.name} by ${t.artists.map(a => a.name).join(', ')}`).join('\n'); 
         
         const prompt = `
@@ -166,7 +167,7 @@ app.get('/api/playlist/:id', async (req, res) => {
             const { name, artist } = analysisResult.recommendedSong;
             const searchQuery = `track:${name} artist:${artist}`;
             
-            // FIXED URL: Real Spotify Search API
+            // CORRECTION: Use the real Spotify Search API
             const searchUrl = `https://api.spotify.com/v1/search?q=${encodeURIComponent(searchQuery)}&type=track&limit=1`;
             
             try {
@@ -176,7 +177,7 @@ app.get('/api/playlist/:id', async (req, res) => {
                     analysisResult.recommendedSong.coverArt = track.album.images[0]?.url;
                 }
             } catch (searchError) {
-                console.error("Spotify search for recommended song failed:", searchError.message);
+                console.error("Spotify search failed:", searchError.message);
             }
         }
         
@@ -184,15 +185,9 @@ app.get('/api/playlist/:id', async (req, res) => {
 
     } catch (error) {
         console.error("--- BACKEND ERROR ---");
-        if (error.response) {
-            console.error("Data:", error.response.data);
-            console.error("Status:", error.response.status);
-            // This is where your 404 was coming from!
-            res.status(error.response.status).json({ error: error.response.data });
-        } else {
-            console.error("Error:", error);
-            res.status(500).json({ error: 'Internal Server Error' });
-        }
+        // Log the actual error to Vercel logs so we can see it
+        console.error(error.response?.data || error.message);
+        res.status(error.response?.status || 500).json({ error: error.message });
     }
 });
 
