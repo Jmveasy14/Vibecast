@@ -22,7 +22,10 @@ const FRONTEND_URI = process.env.FRONTEND_URI || 'http://127.0.0.1:3000';
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 
 // --- Middleware ---
-app.use(cors());
+app.use(cors({
+  origin: 'https://vibecast-ashy.vercel.app', // Your actual frontend URL
+  credentials: true // Important for cookies/headers
+}));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
