@@ -105,7 +105,7 @@ function App() {
               <div className="playlists-grid">
                 {playlists.map((playlist) => (
                   <div key={playlist.id} className="playlist-item" onClick={() => handlePlaylistClick(playlist)}>
-                    {playlist.images[0] ? (
+                    {playlist.images?.[0] ? (   // <--- Added ?. here
                       <img src={playlist.images[0].url} alt={`${playlist.name} cover`} />
                     ) : (
                       <div className="playlist-placeholder-image">♫</div>
