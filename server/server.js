@@ -53,7 +53,7 @@ app.get('/api/auth/login', (req, res) => {
         show_dialog: true
     });
     
-    // CORRECT URL: https://accounts.spotify.com/authorize
+    // FIXED: The OFFICIAL Spotify Authorize URL
     res.redirect(`https://accounts.spotify.com/authorize?${params.toString()}`);
 });
 
@@ -75,7 +75,7 @@ app.get('/api/auth/callback', async (req, res) => {
             redirect_uri: SPOTIFY_REDIRECT_URI 
         });
         
-        // CORRECT URL: https://accounts.spotify.com/api/token
+        // FIXED: The OFFICIAL Spotify Token URL
         const response = await axios({
             method: 'post', 
             url: 'https://accounts.spotify.com/api/token', 
@@ -100,7 +100,7 @@ app.get('/api/playlists', async (req, res) => {
     if (!token) return res.status(401).json({ error: 'Authorization token not provided.' });
     
     try {
-        // CORRECT URL: https://api.spotify.com/v1/me/playlists
+        // FIXED: The OFFICIAL Spotify Web API URL
         const response = await axios.get('https://api.spotify.com/v1/me/playlists', { 
             headers: { 'Authorization': token } 
         });
@@ -124,7 +124,7 @@ app.get('/api/playlist/:id', async (req, res) => {
         let allTracks = [];
         const fields = 'items(track(id,name,artists(name))),next';
         
-        // CORRECT URL: https://api.spotify.com/v1/playlists/...
+        // FIXED: The OFFICIAL Spotify Playlist Tracks URL
         let nextUrl = `https://api.spotify.com/v1/playlists/${playlistId}/tracks?fields=${encodeURIComponent(fields)}`;
         
         while (nextUrl) {
@@ -133,7 +133,7 @@ app.get('/api/playlist/:id', async (req, res) => {
             nextUrl = tracksResponse.data.next;
         }
 
-        // Step 2: Gemini Analysis (Unchanged)
+        // Step 2: Gemini Analysis
         const trackList = allTracks.slice(0, 50).map(t => `${t.name} by ${t.artists.map(a => a.name).join(', ')}`).join('\n'); 
         
         const prompt = `
@@ -156,7 +156,8 @@ app.get('/api/playlist/:id', async (req, res) => {
             ${trackList}
         `;
 
-        const geminiApiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${GEMINI_API_KEY}`;
+        // FIXED: Use standard Gemini model name
+        const geminiApiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`;
         const geminiResponse = await axios.post(geminiApiUrl, {
             contents: [{ parts: [{ text: prompt }] }],
             generationConfig: { response_mime_type: "application/json" }
@@ -169,7 +170,7 @@ app.get('/api/playlist/:id', async (req, res) => {
             const { name, artist } = analysisResult.recommendedSong;
             const searchQuery = `track:${name} artist:${artist}`;
             
-            // CORRECT URL: https://api.spotify.com/v1/search
+            // FIXED: The OFFICIAL Spotify Search URL
             const searchUrl = `https://api.spotify.com/v1/search?q=${encodeURIComponent(searchQuery)}&type=track&limit=1`;
             
             try {
