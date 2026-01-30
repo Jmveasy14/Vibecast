@@ -51,7 +51,7 @@ app.get('/api/auth/login', (req, res) => {
         state, 
         show_dialog: true
     });
-    // CORRECTION: Use the real Spotify Auth URL
+    // FIXED: Points to Real Spotify Auth
     res.redirect(`https://accounts.spotify.com/authorize?${params.toString()}`);
 });
 
@@ -73,7 +73,7 @@ app.get('/api/auth/callback', async (req, res) => {
             redirect_uri: SPOTIFY_REDIRECT_URI 
         });
         
-        // CORRECTION: Use the real Spotify Token URL
+        // FIXED: Points to Real Spotify Token API
         const response = await axios({
             method: 'post', 
             url: 'https://accounts.spotify.com/api/token', 
@@ -98,7 +98,7 @@ app.get('/api/playlists', async (req, res) => {
     if (!token) return res.status(401).json({ error: 'Authorization token not provided.' });
     
     try {
-        // CORRECTION: Use the real Spotify API URL
+        // FIXED: Points to Real Spotify Me/Playlists
         const response = await axios.get('https://api.spotify.com/v1/me/playlists', { 
             headers: { 'Authorization': token } 
         });
@@ -122,7 +122,7 @@ app.get('/api/playlist/:id', async (req, res) => {
         let allTracks = [];
         const fields = 'items(track(id,name,artists(name))),next';
         
-        // CORRECTION: Use the real Spotify API URL
+        // FIXED: Points to Real Spotify Playlist Tracks
         let nextUrl = `https://api.spotify.com/v1/playlists/${playlistId}/tracks?fields=${encodeURIComponent(fields)}`;
         
         while (nextUrl) {
@@ -167,7 +167,7 @@ app.get('/api/playlist/:id', async (req, res) => {
             const { name, artist } = analysisResult.recommendedSong;
             const searchQuery = `track:${name} artist:${artist}`;
             
-            // CORRECTION: Use the real Spotify Search API
+            // FIXED: Points to Real Spotify Search
             const searchUrl = `https://api.spotify.com/v1/search?q=${encodeURIComponent(searchQuery)}&type=track&limit=1`;
             
             try {
@@ -185,7 +185,6 @@ app.get('/api/playlist/:id', async (req, res) => {
 
     } catch (error) {
         console.error("--- BACKEND ERROR ---");
-        // Log the actual error to Vercel logs so we can see it
         console.error(error.response?.data || error.message);
         res.status(error.response?.status || 500).json({ error: error.message });
     }
