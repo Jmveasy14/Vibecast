@@ -53,7 +53,7 @@ app.get('/api/auth/login', (req, res) => {
         show_dialog: true
     });
     
-    // FIXED: The OFFICIAL Spotify Authorize URL
+    // CORRECTED: Official Spotify Authorization URL
     res.redirect(`https://accounts.spotify.com/authorize?${params.toString()}`);
 });
 
@@ -75,7 +75,7 @@ app.get('/api/auth/callback', async (req, res) => {
             redirect_uri: SPOTIFY_REDIRECT_URI 
         });
         
-        // FIXED: The OFFICIAL Spotify Token URL
+        // CORRECTED: Official Spotify Token URL
         const response = await axios({
             method: 'post', 
             url: 'https://accounts.spotify.com/api/token', 
@@ -100,7 +100,7 @@ app.get('/api/playlists', async (req, res) => {
     if (!token) return res.status(401).json({ error: 'Authorization token not provided.' });
     
     try {
-        // FIXED: The OFFICIAL Spotify Web API URL
+        // CORRECTED: Official Spotify Web API URL
         const response = await axios.get('https://api.spotify.com/v1/me/playlists', { 
             headers: { 'Authorization': token } 
         });
@@ -124,7 +124,7 @@ app.get('/api/playlist/:id', async (req, res) => {
         let allTracks = [];
         const fields = 'items(track(id,name,artists(name))),next';
         
-        // FIXED: The OFFICIAL Spotify Playlist Tracks URL
+        // CORRECTED: Official Spotify Playlist Tracks URL
         let nextUrl = `https://api.spotify.com/v1/playlists/${playlistId}/tracks?fields=${encodeURIComponent(fields)}`;
         
         while (nextUrl) {
@@ -156,7 +156,7 @@ app.get('/api/playlist/:id', async (req, res) => {
             ${trackList}
         `;
 
-        // FIXED: Use standard Gemini model name
+        // CORRECTED: Official Gemini API URL (Stable version)
         const geminiApiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`;
         const geminiResponse = await axios.post(geminiApiUrl, {
             contents: [{ parts: [{ text: prompt }] }],
@@ -170,7 +170,7 @@ app.get('/api/playlist/:id', async (req, res) => {
             const { name, artist } = analysisResult.recommendedSong;
             const searchQuery = `track:${name} artist:${artist}`;
             
-            // FIXED: The OFFICIAL Spotify Search URL
+            // CORRECTED: Official Spotify Search URL
             const searchUrl = `https://api.spotify.com/v1/search?q=${encodeURIComponent(searchQuery)}&type=track&limit=1`;
             
             try {
@@ -188,7 +188,6 @@ app.get('/api/playlist/:id', async (req, res) => {
 
     } catch (error) {
         console.error("--- BACKEND ERROR ---");
-        // Log detailed error to Vercel
         if (error.response) {
             console.error(JSON.stringify(error.response.data, null, 2));
             res.status(error.response.status).json({ error: error.response.data });
