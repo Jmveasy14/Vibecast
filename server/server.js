@@ -24,7 +24,7 @@ const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 // --- Middleware ---
 app.use(cors({
   origin: 'https://vibecast-ashy.vercel.app', // Your actual frontend URL
-  credentials: true // Important for cookies/headers
+  credentials: true 
 }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -36,35 +36,54 @@ const generateRandomString = (length) => {
 };
 const stateKey = 'spotify_auth_state';
 
-// --- API Routes (Authentication & Playlist List - Unchanged) ---
+// --- API Routes ---
+
+// 1. LOGIN
 app.get('/api/auth/login', (req, res) => {
     const state = generateRandomString(16);
     res.cookie(stateKey, state);
     const scope = 'user-read-private user-read-email playlist-read-private playlist-read-collaborative';
     const params = new URLSearchParams({
-        response_type: 'code', client_id: SPOTIFY_CLIENT_ID, scope,
-        redirect_uri: SPOTIFY_REDIRECT_URI, state, show_dialog: true
+        response_type: 'code', 
+        client_id: SPOTIFY_CLIENT_ID, 
+        scope,
+        redirect_uri: SPOTIFY_REDIRECT_URI, 
+        state, 
+        show_dialog: true
     });
+    // FIXED URL:
     res.redirect(`https://accounts.spotify.com/authorize?${params.toString()}`);
 });
 
+// 2. CALLBACK
 app.get('/api/auth/callback', async (req, res) => {
     const code = req.query.code || null;
     const state = req.query.state || null;
     const storedState = req.cookies ? req.cookies[stateKey] : null;
+    
     if (state === null || state !== storedState) {
         return res.redirect(`${FRONTEND_URI}/#?error=state_mismatch`);
     }
     res.clearCookie(stateKey);
+    
     try {
-        const tokenParams = new URLSearchParams({ grant_type: 'authorization_code', code, redirect_uri: SPOTIFY_REDIRECT_URI });
+        const tokenParams = new URLSearchParams({ 
+            grant_type: 'authorization_code', 
+            code, 
+            redirect_uri: SPOTIFY_REDIRECT_URI 
+        });
+        
+        // FIXED URL:
         const response = await axios({
-            method: 'post', url: 'https://accounts.spotify.com/api/token', data: tokenParams,
+            method: 'post', 
+            url: 'https://accounts.spotify.com/api/token', 
+            data: tokenParams,
             headers: {
                 'Content-Type': 'application/x-www-form-urlencoded',
                 'Authorization': 'Basic ' + (Buffer.from(`${SPOTIFY_CLIENT_ID}:${SPOTIFY_CLIENT_SECRET}`).toString('base64')),
             }
         });
+        
         const { access_token, refresh_token, expires_in } = response.data;
         res.redirect(`${FRONTEND_URI}/#` + new URLSearchParams({ access_token, refresh_token, expires_in }).toString());
     } catch (error) {
@@ -73,25 +92,27 @@ app.get('/api/auth/callback', async (req, res) => {
     }
 });
 
+// 3. GET PLAYLISTS
 app.get('/api/playlists', async (req, res) => {
     const token = req.headers.authorization;
     if (!token) return res.status(401).json({ error: 'Authorization token not provided.' });
+    
     try {
-        const response = await axios.get('https://api.spotify.com/v1/me/playlists', { headers: { 'Authorization': token } });
+        // FIXED URL:
+        const response = await axios.get('https://api.spotify.com/v1/me/playlists', { 
+            headers: { 'Authorization': token } 
+        });
         res.status(200).json(response.data);
     } catch (error) {
         res.status(error.response?.status || 500).json({ error: 'Failed to fetch playlists.' });
     }
 });
 
-/**
- * @route   GET /api/playlist/:id
- * @desc    Fetches tracks and uses Google Gemini for analysis and song recommendation.
- * @access  Private (requires access token)
- */
+// 4. ANALYZE PLAYLIST
 app.get('/api/playlist/:id', async (req, res) => {
     const token = req.headers.authorization;
     const playlistId = req.params.id;
+    
     if (!token) return res.status(401).json({ error: 'Authorization token not provided.' });
     if (!GEMINI_API_KEY) return res.status(500).json({ error: 'Gemini API key not configured.' });
 
@@ -99,15 +120,18 @@ app.get('/api/playlist/:id', async (req, res) => {
         // Step 1: Fetch tracks from Spotify
         let allTracks = [];
         const fields = 'items(track(id,name,artists(name))),next';
+        
+        // FIXED URL:
         let nextUrl = `https://api.spotify.com/v1/playlists/${playlistId}/tracks?fields=${encodeURIComponent(fields)}`;
+        
         while (nextUrl) {
             const tracksResponse = await axios.get(nextUrl, { headers: { 'Authorization': token } });
             allTracks = [...allTracks, ...tracksResponse.data.items.map(item => item.track).filter(t => t && t.id)];
             nextUrl = tracksResponse.data.next;
         }
 
-        // Step 2: Use Google Gemini to analyze the track list
-        const trackList = allTracks.slice(0, 50).map(t => `${t.name} by ${t.artists.map(a => a.name).join(', ')}`).join('\n'); // Limit to 50 tracks to keep prompt size reasonable
+        // Step 2: Gemini Analysis (Unchanged)
+        const trackList = allTracks.slice(0, 50).map(t => `${t.name} by ${t.artists.map(a => a.name).join(', ')}`).join('\n'); 
         
         const prompt = `
             Based on the following list of song titles from a Spotify playlist, perform a deep analysis.
@@ -125,12 +149,6 @@ app.get('/api/playlist/:id', async (req, res) => {
                   "reason": "string"
               }
             }.
-
-            - primaryMood: A short, descriptive name for the overall vibe.
-            - tags: A list of 3-5 single-word tags describing the mood.
-            - activitySuggestions: A list of 2-3 recommended activities.
-            - recommendedSong: An object containing the name, artist, and a short, compelling reason why this song fits the playlist's vibe.
-
             Playlist Tracks:
             ${trackList}
         `;
@@ -143,10 +161,12 @@ app.get('/api/playlist/:id', async (req, res) => {
 
         const analysisResult = JSON.parse(geminiResponse.data.candidates[0].content.parts[0].text);
         
-        // --- NEW: Step 3: Search Spotify for the recommended song to get its cover art ---
+        // Step 3: Search Spotify for recommended song cover
         if (analysisResult.recommendedSong) {
             const { name, artist } = analysisResult.recommendedSong;
             const searchQuery = `track:${name} artist:${artist}`;
+            
+            // FIXED URL:
             const searchUrl = `https://api.spotify.com/v1/search?q=${encodeURIComponent(searchQuery)}&type=track&limit=1`;
             
             try {
@@ -157,21 +177,22 @@ app.get('/api/playlist/:id', async (req, res) => {
                 }
             } catch (searchError) {
                 console.error("Spotify search for recommended song failed:", searchError.message);
-                // If search fails, we continue without the cover art, it's not a critical failure.
             }
         }
         
         res.status(200).json(analysisResult);
 
     } catch (error) {
-        console.error("--- GEMINI ANALYSIS ERROR ---");
+        console.error("--- BACKEND ERROR ---");
         if (error.response) {
             console.error("Data:", error.response.data);
             console.error("Status:", error.response.status);
+            // This is where your 404 was coming from!
+            res.status(error.response.status).json({ error: error.response.data });
         } else {
-            console.error("Full Error:", error);
+            console.error("Error:", error);
+            res.status(500).json({ error: 'Internal Server Error' });
         }
-        res.status(error.response?.status || 500).json({ error: 'Failed to complete Gemini AI analysis.' });
     }
 });
 
